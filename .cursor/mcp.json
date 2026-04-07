@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp-server": {
+      "command": "python3",
+      "args": [
+        "/Users/avaneesh/Library/Mobile Documents/com~apple~CloudDocs/uvniche/mcp-demo/custom-mcp.py"
+      ]
+    }
+  }
+}
