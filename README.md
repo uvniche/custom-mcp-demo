@@ -1,4 +1,4 @@
-# Custom MCP Demo - macOS
+# Custom MCP Demo
 
 # MCP
 
@@ -73,6 +73,8 @@ mcp = FastMCP("custom-mcp-server")
 
 Each decorated function becomes callable from any MCP-compatible client.
 
+`system_info`: Returns OS and machine metadata for quick diagnostics.
+
 ```python
 @mcp.tool()
 def system_info() -> dict:
@@ -85,6 +87,8 @@ def system_info() -> dict:
         "processor": platform.processor(),
     }
 ```
+
+`list_directory`: Validates a path and lists directory entries in sorted order.
 
 ```python
 @mcp.tool()
@@ -99,8 +103,18 @@ def list_directory(path: str = ".") -> dict:
     return {"ok": True, "path": str(p), "entries": entries}
 ```
 
+`run_safe_shell`: Runs only commands from an OS-aware allowlist for safer execution.
+
 ```python
-ALLOWED_BINARIES = {"ls", "pwd", "whoami", "date", "uptime", "open", "say"}
+SYSTEM_NAME = platform.system()
+
+COMMON_ALLOWED_BINARIES = {"python", "python3", "whoami"}
+OS_ALLOWED_BINARIES = {
+    "Darwin": {"ls", "pwd", "date", "uptime", "open", "say"},
+    "Linux": {"ls", "pwd", "date", "uptime", "xdg-open"},
+    "Windows": {"cmd", "powershell", "whoami"},
+}
+ALLOWED_BINARIES = COMMON_ALLOWED_BINARIES | OS_ALLOWED_BINARIES.get(SYSTEM_NAME, set())
 
 @mcp.tool()
 def run_safe_shell(command: str) -> dict:
@@ -120,18 +134,40 @@ def run_safe_shell(command: str) -> dict:
     return {"ok": True, "command": command, **result}
 ```
 
+`open_application`: Opens an app or file using native commands on each OS.
+
 ```python
 @mcp.tool()
 def open_application(app_name: str) -> dict:
-    result = _run_subprocess(["open", "-a", app_name])
+    if SYSTEM_NAME == "Darwin":
+        cmd = ["open", "-a", app_name]
+    elif SYSTEM_NAME == "Linux":
+        cmd = ["xdg-open", app_name]
+    elif SYSTEM_NAME == "Windows":
+        cmd = ["powershell", "-NoProfile", "-Command", f"Start-Process '{app_name}'"]
+    else:
+        return {"ok": False, "error": f"Unsupported OS: {SYSTEM_NAME}"}
+
+    result = _run_subprocess(cmd)
     return {"ok": result["exit_code"] == 0, "app_name": app_name, **result}
 ```
+
+`lock_screen`: Locks the current session using platform-specific commands.
 
 ```python
 @mcp.tool()
 def lock_screen() -> dict:
-    script = 'tell application "System Events" to keystroke "q" using {control down, command down}'
-    result = _run_subprocess(["osascript", "-e", script])
+    if SYSTEM_NAME == "Darwin":
+        script = 'tell application "System Events" to keystroke "q" using {control down, command down}'
+        cmd = ["osascript", "-e", script]
+    elif SYSTEM_NAME == "Linux":
+        cmd = ["loginctl", "lock-session"]
+    elif SYSTEM_NAME == "Windows":
+        cmd = ["rundll32.exe", "user32.dll,LockWorkStation"]
+    else:
+        return {"ok": False, "error": f"Unsupported OS: {SYSTEM_NAME}"}
+
+    result = _run_subprocess(cmd)
     return {"ok": result["exit_code"] == 0, **result}
 ```
 
@@ -167,3 +203,12 @@ Cursor example (`.cursor/mcp.json`):
 ### 6) Reload MCP servers in your client
 
 Restart MCP servers (or reload the window). Your client should discover these tools automatically.
+
+## References
+
+- [Model Context Protocol (Official Docs)](https://modelcontextprotocol.io/)
+- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+- [Cursor MCP Documentation](https://docs.cursor.com/context/model-context-protocol)
+- [Playwright MCP Server](https://github.com/microsoft/playwright-mcp)
+- [This Demo Repository](https://github.com/uvniche/custom-mcp-demo.git)
+
