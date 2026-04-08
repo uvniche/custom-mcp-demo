@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
 ### 5) Connect your MCP client to the server
 
-Every MCP-compatible IDE or chat client has its own config format, but the core server launch settings are the same:
+Every MCP-compatible IDE/chat client has its own config format, but the core server launch settings are the same:
 
 - command: `python3`
 - args: path to `custom-mcp.py` (absolute path recommended)
@@ -199,6 +199,26 @@ Cursor example (`.cursor/mcp.json`):
   }
 }
 ```
+
+VS Code example (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "custom-mcp-server": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "./custom-mcp.py"
+      ]
+    }
+  }
+}
+```
+
+In VS Code, you can create/edit this file in your workspace by running **`MCP: Open Workspace Folder Configuration`** from the Command Palette (or by creating `.vscode/mcp.json` manually).
+
+After saving your config, VS Code may prompt you to **trust** the server the first time it starts it. Then restart/reload the window so the tools are discovered.
 
 ### 6) Reload MCP servers in your client
 
